@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+<script type="text/javascript" src="../src/worker.base.message.js"></script>
+<script type="text/javascript" src="../src/worker.indexeddb.message.js"></script>
+<script type="text/javascript">
+var worker;
+function init() {
+	//create worker
+	worker = new Worker("../src/worker.indexeddb.js");
+	//displays messages from worker
+	worker.onmessage = function(message) {
+		console.dir(message);
+		var result = $("<li></li>").text(message.data.result);
+		result.appendTo("#result");
+	};
+}
+
+function testCreateDB() {
+	//set schema
+	var schemaText = $("#schema").val();
+	var schema = JSON.parse(schemaText);
+	var message = {
+		name: IndexedDbRequestMessage.NAMES.SET_SCHEMA,
+		data: schema
+	};
+	worker.postMessage(message);
+}
+</script>
+</head>
+<body onload="init()">
+<div>
+	<header>IndexedDB example</header>
+	Watch your browser's console.
+	<textarea id="schema" rows="20" cols="80">
+{
+	"name": "SampleDatabase",
+	"version": 1,
+	"objectStores": [
+		{
+			"name": "Store1",
+			"options": {
+				"keyPath": "id",
+				"autoIncrement": true
+			},
+			"indices": [
+				{
+					"name": "index1",
+					"keyPath": "key1",
+					"options" : {
+						"unique": true,
+						"multiEntry": false
+					}
+				},
+				{
+					"name": "key2",
+					"options" : {
+						"multiEntry": true
+					}
+				}
+			]
+		},
+		{
+			"name": "Store2",
+			"options": {
+				"keyPath": ["key1", "key2"]
+			},
+			"indices": [
+				{
+					"name": "index1",
+					"keyPath": ["key2", "key3"]
+				}
+			]
+		}				
+	]
+}	
+	</textarea>
+	<button onclick="testCreateDB()">Create IDB</button>
+</div>
+<ul id="result">
+</ul>
+</body>
+</html>

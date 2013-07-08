@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Web Worker Plugin Testbed</title>
+<script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+<script type="text/javascript" src="../src/worker.base.message.js"></script>
+<script type="text/javascript">
+var worker;
+function init() {
+	//create worker
+	worker = new Worker("../src/worker.test.js");
+	//displays messages from worker
+	worker.onmessage = function(message) {
+		console.dir(message);
+		var echo = $("<li></li>").text(message.data.result);
+		echo.appendTo("#result");
+	};
+}
+
+function testEcho() {
+	var text = $("#echo").val();
+	var message = {
+		name: "echo", //message event name
+		data: text
+	}
+	worker.postMessage(message);
+}
+</script>
+</head>
+<body onload="init()">
+<div>
+	<header>Echo example</header>
+	Watch your browser's console.
+	<input id="echo"/>
+	<button onclick="testEcho()">Test Echo</button>
+</div>
+<ul id="result">
+</ul>
+</body>
+</html>
