@@ -11,24 +11,25 @@
  * Corresponding message event handlers will also assigned
  */
 
-//constant values and configurations ------------------------------------------
-var DATA_JS = 'datajs-1.1.1beta2.min.js';
-var WORKER_JS = "worker.base.js";
-var ODATA_MESSAGE_JS = "worker.odata.message.js";
-var FETCH_PER_REQUEST = 50;
 
 //plug-in implementation ------------------------------------------------------
 (function($) {
+	//constant values and configurations ------------------------------------------
+	var DEPENCENCIES = ['datajs-1.1.1beta2.min.js',
+	                    'worker.base.js', 'worker.odata.message.js'];
+	var FETCH_PER_REQUEST = 50;
+
 	//import dependency
-	importScripts(WORKER_JS);
-	importScripts(ODATA_MESSAGE_JS);
-	importScripts(DATA_JS);
+	for (var i = 0; i < DEPENCENCIES.length; i++) {
+		importScripts(DEPENCENCIES[i]);		
+	}
+	
 	
 	//private variables and methods -------------------------------------------
 	var _uri = "";
 	var _user = "";
 	var _password = "";
-	
+
 	/**
 	 * Recursive read data, then finally invoke callback
 	 */

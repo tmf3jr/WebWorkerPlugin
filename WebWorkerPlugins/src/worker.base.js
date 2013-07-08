@@ -16,13 +16,16 @@
  * }
  */
 
-//constant values and configurations ------------------------------------------
-var WORKER_MESSAGE_JS = "worker.base.message.js";
 
 //plug-in implementation ------------------------------------------------------
 (function($) {
+	//constant values and configurations ------------------------------------------
+	var DEPENCENCIES = ["worker.base.message.js"];
+	
 	//import dependency
-	importScripts(WORKER_MESSAGE_JS);
+	for (var i = 0; i < DEPENCENCIES.length; i++) {
+		importScripts(DEPENCENCIES[i]);		
+	}
 	//message event handler collection
 	var _handlers = {};
 
