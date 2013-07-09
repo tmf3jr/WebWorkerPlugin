@@ -1,27 +1,14 @@
-/**
- * Definition of Worker message classes.
- * 
- * This worker accepts posted message below.
- * PostingMessage = {
- * 	 {string}name   : message event name,
- * 	 {object}[data] : event specific data, this is optional
- * }
- * 
- * When worker posts message, it should be like this.
- * WorkerMessage = {
- * 	 {string}name     :  message event name,
- * 	 {string}status   : "completed" | "failed" | "info" | "debug",
- *   {object}[result] :  event specific result
- * }
- * 
+/*
+ * Definition of message classes to communicate with worker
  */
-
 
 /**
  * Abstract message class
+ * @class Abstract message
  * @param {object}[source] value of message
+ * properties are copied from source into this object
  */
-var AbstractMessage = function(source) {
+function AbstractMessage(source) {
 	//extend from source object
 	this.extend(source);
 };
@@ -38,23 +25,44 @@ AbstractMessage.prototype.extend = function(source) {
 
 
 /**
- * Message class from main thread to worker
+ * This message indicates task to worker
+ * @class Message indicates task for worker
  * @param {object}[source] value of message
+ * IndicationMessage is plain object that can be converted to JSON string.<br/>
+ * Object notation is below.<br/>
+ * <code>
+ * IndicationMessage = {
+ * 	 {String}name   : message event name,
+ * 	 {Object}[data] : event specific data
+ * }
+ * </code>
  */
-var PostingMessage = function(source) {
+function IndicationMessage(source) {
 	//extend from source object
 	this.extend(source);
 };
 /** inherits AbstractMessage */
-PostingMessage.prototype = new AbstractMessage({
+IndicationMessage.prototype = new AbstractMessage({
 	data: {}
 });
 
 /**
- * Message class from worker to message event listener such as main thread
- * @param {object}[source] value of message
+ * This is message class sent by worker.
+ * Event listener including main thread can receive the message by using
+ * Worker.onmessage event.
+ * @class Message send by worker
+ * @param {Object}[source] value of message
+ * WorkerMessage is plain object that can be converted to JSON string.<br/>
+ * Object notation is below.<br/>
+ * <code>
+ * WorkerMessage = {
+ * 	 {String}name     :  message event name,
+ * 	 {String}status   : "completed" | "failed" | "info" | "debug",
+ *   {Object}[result] :  event specific result
+ * }
+ * </code>
  */
-var WorkerMessage = function(source) {
+function WorkerMessage(source) {
 	//extend from source object
 	this.extend(source);
 };

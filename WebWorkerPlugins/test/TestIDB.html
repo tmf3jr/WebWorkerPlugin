@@ -13,22 +13,79 @@ function init() {
 	worker = new Worker("../src/worker.indexeddb.js");
 	//displays messages from worker
 	worker.onmessage = function(message) {
-		console.dir(message);
-		var result = $("<li></li>").text(message.data.result);
+		console.dir(message.data);
+		var log = message.data.name + ": " +
+			message.data.status + ": " +
+			message.data.result;
+		var result = $("<li></li>").text(log);
 		result.appendTo("#result");
 	};
 }
 
-function testCreateDB() {
+function testSetSchema() {
 	//set schema
 	var schemaText = $("#schema").val();
 	var schema = JSON.parse(schemaText);
 	var message = {
-		name: IndexedDbRequestMessage.NAMES.SET_SCHEMA,
+		name: IndexedDbMessage.NAMES.SET_SCHEMA,
 		data: schema
 	};
 	worker.postMessage(message);
 }
+
+function testSave() {
+	//save into Store1
+	var message = new IndicationMessage({
+		name: IndexedDbMessage.NAMES.SAVE,
+		data: {
+			source: {
+				objectStore: "Store1"
+			},
+			values: [
+				{key1: $("#key1").val(), key2: $("#key2").val(), key3: $("#key3").val()}
+			]
+		}
+	});
+	worker.postMessage(message);
+	//save into Store2
+	message.data.source.objectStore = "Store2";
+	worker.postMessage(message);	
+}
+
+function testRead() {
+	//save into Store1
+	var message = new IndicationMessage({
+		name: IndexedDbMessage.NAMES.READ,
+		data: {
+			source: {
+				objectStore: "Store1",
+				index: "index1"
+			}
+		}
+	});
+	worker.postMessage(message);
+	//save into Store2
+	message.data.source.objectStore = "Store2";
+	worker.postMessage(message);
+}
+
+function testReadKeys() {
+	//save into Store1
+	var message = new IndicationMessage({
+		name: IndexedDbMessage.NAMES.READ_KEYS,
+		data: {
+			source: {
+				objectStore: "Store1",
+				index: "index1"
+			}
+		}
+	});
+	worker.postMessage(message);
+	//save into Store2
+	message.data.source.objectStore = "Store2";
+	worker.postMessage(message);
+}
+
 </script>
 </head>
 <body onload="init()">
@@ -78,8 +135,19 @@ function testCreateDB() {
 	]
 }	
 	</textarea>
-	<button onclick="testCreateDB()">Create IDB</button>
+	<button onclick="testSetSchema()">Create IDB</button>
 </div>
+<div>
+	Key1: <input id="key1" type="text"/>
+	Key2: <input id="key2" type="text"/>
+	Key3: <input id="key3" type="text"/>
+	<button onclick="testSave()">Save</button>
+</div>
+<div>
+	<button onclick="testRead()">Read</button>
+	<button onclick="testReadKeys()">Read Keys</button>
+</div>
+
 <ul id="result">
 </ul>
 </body>

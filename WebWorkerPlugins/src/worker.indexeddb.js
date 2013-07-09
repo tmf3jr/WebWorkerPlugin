@@ -2,11 +2,12 @@
  * IndexedDB worker
  * self.idb = {
  *   //These functions are available through worker message
- *   function setSchema(schema)
- *   function save(name, objects, callback)
- *   function read(name, indexName, range, direction, callback)
- *   function readKeys(name, indexName, range, direction, callback)
- *   function delete(name, indexName, range, callback)
+ *   function setSchema(schema[, success][, error])
+ *   function save(name, objects, [callback]), callback = function(event){...}
+ *   function read(name, indexName, range, direction, callback), callback = function(event, result){...}
+ *   function readKeys(name, indexName, range, direction, callback), callback = function(event, result){...}
+ *   function delete(name, indexName, range, [callback]), callback = function(event){...}
+ *   
  *   //These functions are not accessible through worker message
  *   function setDatabaseUpgradeHandler(handler)
  * }
@@ -45,41 +46,53 @@
 		}
 	}
 	
-	function _openDatabase(callback) {
-		//make sure schema is set
+	/**
+	 * 
+	 * @param [success] invoked when completed successfully
+	 * @param [error] invoked when error occurred
+	 * each callback functions should have signatures below
+	 * function success({IDBDatabase}db) {...}
+	 * function error(even) {...}
+	 */
+	function _openDatabase(success, error) {
+		//make sure schema is already set
 		if (!_schema) {
-			$.base.postFailed(null, "Unable to open database: schema is required");
+			$.base.postFailed("Unable to open database: schema is required");
 			return;
 		}
-
-		//debug
-		$.base.postDebug(null, "Opening database");
-
 		//open database
 		var dbFactory = $.indexedDB;
 		var dbOpenReq = dbFactory.open(_schema.name, _schema.version);
 		//create database if necessary
 		dbOpenReq.onupgradeneeded = function(event) {
-			$.base.postDebug(null, "Creating database");
+			$.base.postDebug("Creating database");
 			var db = event.target.result;
 			_upgradeHandler(db);
-			$.base.postDebug(null, "IndexedDB created successfully");
 		};
 		dbOpenReq.onerror = function(event) {
-			$.base.postFailed(null, "Unable to open database: " + event);
+			$.base.postFailed("Unable to open database: " + event);
+			if (error) {
+				error(event);
+			}
 		};
 		dbOpenReq.onsuccess = function(event) {
-			$.base.postDebug(null, "IndexedDB opened successfully");
+			$.base.postDebug("IndexedDB opened successfully");
 			var db = event.target.result;
-			if (callback) {
-				callback(db);
+			if (success) {
+				success(db);
 			}
 		};
 	}
 
 
 	/**
+	 * 
+	 * @param {string}name
+	 * @param {string}indexName index name can be null
 	 * @param {IDBTransactionMode}mode
+	 * @param result
+	 * @param complete
+	 * @param callback
 	 */
 	function _beginTransaction(name, indexName, mode, result, complete, callback) {
 		_openDatabase(function(db) {
@@ -109,8 +122,8 @@
 	 */
 	function _aggregateKeys(iterator, range, direction, result) {
 		//sanitize arguments
-		if (direction === IndexedDbEnum.DIRECTION.NEXT) {
-			direction = IndexedDbEnum.DIRECTION.NEXT_UNIQUE;
+		if (!direction || direction === IndexedDbEnum.DIRECTION.NEXT) {
+			direction = IndexedDbEnum.DIRECTION.NEXT_UNIQUE;			
 		}else if (direction === IndexedDbEnum.DIRECTION.PREV) {
 			direction = IndexedDbEnum.DIRECTION.PREV_UNIQUE;
 		}
@@ -124,18 +137,20 @@
 		cursorReq.onsuccess = function(event) {
 			//iterate keys
 			var cursor = event.target.result;
-			var key = cursor.key;
-			//get number of the same key in the database
-			var keyCountReq = store.count(key);
-			keyCountReq.onsuccess = function(event) {
-				var count = event.target.result;
-				var entity = {
-					key: key,
-					count: count
+			if (cursor) {
+				var key = cursor.key;
+				//get number of the same key in the database
+				var keyCountReq = iterator.count(key);
+				keyCountReq.onsuccess = function(event) {
+					var count = event.target.result;
+					var entity = {
+						key: key,
+						count: count
+					};
+					result.push(entity);
 				};
-				result.push(entity);
-			};
-		    cursor.advance(1);
+			    cursor.advance(1);				
+			}
 		};
 	}
 
@@ -146,13 +161,19 @@
 	 * @param {Array}result
 	 */
 	function _aggregateValues(iterator, range, direction, result) {
+		//sanitize arguments
+		if (!direction) {
+			direction = IndexedDbEnum.DIRECTION.NEXT;
+		}
 		//open cursor
 		var cursorReq = iterator.openCursor(range, direction);
 		cursorReq.onsuccess = function(event) {
 			//iterate keys
 			var cursor = event.target.result;
-			result.push(cursor.value);
-		    cursor.advance(1);
+			if (cursor) {
+				result.push(cursor.value);
+			    cursor.advance(1);				
+			}
 		};
 	}
 	
@@ -163,32 +184,43 @@
 	}
 	function _handleSave(message) {
 		var req = message.data;
-		$.idb.save(req.schema.name, req.data.values, 
+		$.idb.save(req.source.objectStore, req.values, 
 			function(event) {
-				$.base.postCompleted(message);
+				$.base.postCompleted(null, message);
 		});
 	}
 	function _handleRead(message) {
 		var req = message.data;
-		$.idb.read(req.schema.name, req.schema.indexName,
-			req.query.range, req.query.direction,
+		var range = null;
+		var direction = IndexedDbEnum.DIRECTION.NEXT;
+		if (req.query) {
+			range = req.query.range;
+			direction = req.query.direction;
+		}
+		$.idb.read(req.source.objectStore, req.source.index, range, direction,
 			function(event, result) {
-				$.base.postCompleted(message, result);
+				$.base.postCompleted(result, message);
 		});
 	}
 	function _handleReadKeys(message) {
 		var req = message.data;
-		$.idb.readKeys(req.schema.name, req.schema.indexName,
-			req.query.range, req.query.direction,
+		var range = null;
+		var direction = IndexedDbEnum.DIRECTION.NEXT_UNIQUE;
+		if (req.query) {
+			range = req.query.range;
+			direction = (req.query.direction) ?
+				req.query.direction : IndexedDbEnum.DIRECTION.NEXT_UNIQUE;
+		}
+		$.idb.readKeys(req.source.objectStore, req.source.index, range, direction,
 			function(event, result) {
-				$.base.postCompleted(message, result);
+				$.base.postCompleted(result, message);
 		});
 	}
 	function _handleRemove(message) {
 		var req = message.data;
-		$.idb.remove(req.schema.name, req.schema.indexName, req.query.range,
+		$.idb.remove(req.source.objectStore, req.source.index, req.query.range,
 			function(event) {
-				$.base.postCompleted(message);
+				$.base.postCompleted(null, message);
 		});
 	}
 
@@ -198,10 +230,15 @@
 		/**
 		 * Set indexedDB schema.
 		 * @param {IndexedDbDatabaseSchema}schema
+		 * @param {Function}[callback]
+		 * @param {Function}[error]
+		 * callback should have signature below
+		 * function callback({IDBDatabase}db) {...}
+		 * function error(event) {...}
 		 */
-		setSchema: function(schema) {
+		setSchema: function(schema, success, error) {
 			_schema = schema;
-			_openDatabase();
+			_openDatabase(success, error);
 		},
 		/**
 		 * Assign custom database creation method
@@ -275,10 +312,10 @@
 	};
 
 	//message event handler ---------------------------------------------------
-	$.base.on(IndexedDbRequestMessage.NAMES.SET_SCHEMA, _handleSetSchema);
-	$.base.on(IndexedDbRequestMessage.NAMES.SAVE, _handleSave);
-	$.base.on(IndexedDbRequestMessage.NAMES.READ, _handleRead);
-	$.base.on(IndexedDbRequestMessage.NAMES.READ_KEYS, _handleReadKeys);
-	$.base.on(IndexedDbRequestMessage.NAMES.REMOVE, _handleRemove);
+	$.base.on(IndexedDbMessage.NAMES.SET_SCHEMA, _handleSetSchema);
+	$.base.on(IndexedDbMessage.NAMES.SAVE, _handleSave);
+	$.base.on(IndexedDbMessage.NAMES.READ, _handleRead);
+	$.base.on(IndexedDbMessage.NAMES.READ_KEYS, _handleReadKeys);
+	$.base.on(IndexedDbMessage.NAMES.REMOVE, _handleRemove);
 
 })(self);

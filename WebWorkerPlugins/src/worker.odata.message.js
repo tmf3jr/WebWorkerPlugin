@@ -1,38 +1,41 @@
+/*
+ * Definition of message classes to communicate with worker OData plug-in.
+ * This classes are depends on "worker.base.message.js" file.<br/>
+ * <br/>
+ * Some of indication message may cause WorkerMessage as return of task.<br/>
+ * These are content of result for task indication.
+ * <ul>
+ *   <li>"OData.getCount": {Number}</li>
+ *   <li>"OData.getList": {Object[]}</li>
+ * </ul>
+ */
+
 /**
- * Definition of OData Worker message classes.
- * 
+ * This message requests to call OData service
+ * @class This message requests to call OData service
+ * @param {Object}[source] value of message
+ * ODataRequestMessage is plain object inheriting IndicationMessage
+ * that can be converted to JSON string.<br/>
+ * Object notation is below.<br/>
+ * <code>
  * ODataRequestMessage = {
- * 	 {string}name : "OData.setUri" | "OData.setAuthentication" |
+ * 	 {String}name : "OData.setUri" | "OData.setAuthentication" |
  *                  "OData.getCount" | "OData.getList",
- *   {object}data : {
- *   	//setUri
- * 	 	{string}uri: OData service URI
+ *   {Object}data : {
+ *   	//for setUri
+ * 	 	{String}uri: OData service URI
  * 
- * 	    //setAuthentication
- * 	    {string}user: user for BASIC authentication
- *      {string}password: password for BASIC authentication
+ * 	    //for setAuthentication
+ * 	    {String}user: user for BASIC authentication
+ *      {String}password: password for BASIC authentication
  *      
- *      //getODataCount, getODataList
- *      {string}query: OData query
+ *      //for getODataCount, getODataList
+ *      {String}query: OData query
  * 	 }
  * }
- * 
- * When ODataRequestMessage is posted with "OData.getCount" or "OData.getList",
- * worker will back the message.
- * WorkerMessage = {
- * 	 {string}name     :  message event name,
- * 	 {string}status   : "completed" | "failed" | "info" | "debug",
- *   {object}[result] :  event specific result,
- *     Number for "OData.getCount", Object for "OData.getList"
- * }
+ * </code>
  */
-
-
-/**
- * Message class from main thread to worker
- * @param {object} [source] value of message
- */
-var ODataRequestMessage = function(source) {
+function ODataRequestMessage(source) {
 	//extend from source object
 	this.extend(source);
 };
@@ -43,7 +46,7 @@ ODataRequestMessage.NAMES = {
 	GET_COUNT:          "OData.getCount",
 	GET_LIST:           "OData.getList",
 };
-ODataRequestMessage.prototype = new PostingMessage({
+ODataRequestMessage.prototype = new IndicationMessage({
 	data: {
 		uri: "",
 		user: null,

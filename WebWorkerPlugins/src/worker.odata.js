@@ -1,14 +1,22 @@
 /**
- * OData worker plug-in.
+ * OData worker plug-in implementation.<br/>
  * Currently, $count and GET operations are implemented.
- * Following methods will be added to worker.
- * self.odata = {
- *   function setUri(uri)
- *   function setAuthentication(user, password)
- *   function getCount(query, callback)
- *   function getList(query, callback)
- * }
- * Corresponding message event handlers will also assigned
+ * Following methods will be added to worker under "self.odata" namespace.<br/>
+ * <ul>
+ *   <li>setUri({String}uri)</li>
+ * 	 <li>setAuthentication({String}user, {String}password)</li>
+ *   <li>getCount({String}query, {Function}callback)</li>
+ *   <li>function getList({String}query, {Function}callback)</li>
+ * </ul>
+ * Corresponding message event handlers will also assigned for events below.<br/>
+ * <code>
+ * ODataRequestMessage.NAMES = {
+ * 	 SET_URI:            "OData.setUri",
+ *   SET_AUTHENTICATION: "OData.setAuthentication",
+ *   GET_COUNT:          "OData.getCount",
+ *   GET_LIST:           "OData.getList",
+ * };
+ * </code>
  */
 
 
@@ -32,8 +40,20 @@
 
 	/**
 	 * Recursive read data, then finally invoke callback
+	 * @private
+	 * @param {String}query OData query, can be null
+	 * @param {Function}complete invoked when completed
+	 * @param {Function}error invoked when error occurred, can be null
+	 * @param {Number}skip $skip parameter of OData query
+	 * @param {Number}max maximum number of OData entities to be read
+	 * @param {Object[]}result stores OData entities
+	 * callback function should have signature below.<br/>
+	 * <ul>
+	 *   <li>function complete({Object[]}result)</li>
+	 *   <li>function error({Error}error)</li>
+	 * </ul>
 	 */
-	function _readData(query, callback, skip, max, result) {
+	function _readData(query, complete, error, skip, max, result) {
 		if (skip < max) {
 			//create query
 			var url = _uri + "?$skip=" + skip + "&$top=" + FETCH_PER_REQUEST;
@@ -55,20 +75,20 @@
 					result = result.concat(data.results);
 					skip = skip + FETCH_PER_REQUEST;
 					_readData(query, callback, skip, max, result);
-				});
+				}, error);
 		}else{
 			//reached to last page, hence invoke callback and returns result
-			callback(result);
+			complete(result);
 		}
 	}
 
 	//message event handlers
 	function _handleSetUri(message) {
 		$.odata.setUri(message.data.uri);
-	};
+	}
 	function _handleSetAuthentication(message) {
 		$.odata.setAuthentication(message.data.user, message.data.password);
-	};
+	}
 	function _handleGetCount(message) {
 		//get query if exists
 		var query = null;
@@ -76,10 +96,10 @@
 			query = message.data.query;
 		}
 		//call OData service
-		$.odata.getCount(query, function(count) {
-			$.base.postCompleted(message, count);
-		});
-	};
+		$.odata.getCount(query,
+			function(count) { $.base.postCompleted(count, message);	},
+			function(error) { $.base.postFailed(error, message); });
+	}
 	function _handleGetList(message) {
 		//get query if exists
 		var query = null;
@@ -87,24 +107,28 @@
 			query = message.data.query;
 		}
 		//call OData service
-		$.odata.getList(query, function(result) {
-			$.base.postCompleted(message, result);
-		});
-	};	
+		$.odata.getList(query,
+			function(result) { $.base.postCompleted(result, message); },
+			function(error) { $.base.postFailed(error, message); });
+	}	
 	
 	//public methods ----------------------------------------------------------
+	/**
+	 * "odata" namespace
+	 * @public
+	 */
 	$.odata = {
 		/**
 		 * Set OData service URI
-		 * @param {string}uri
+		 * @param {String}uri
 		 */
 		setUri: function(uri) {
 			_uri = uri;
 		},
 		/**
 		 * Set BASIC authentication user and password
-		 * @param {string}user
-		 * @param {string}password
+		 * @param {String}user
+		 * @param {String}password
 		 */
 		setAuthentication: function(user, password) {
 			_user = user;
@@ -113,15 +137,19 @@
 		
 		/**
 		 * Returns number of OData entities
-		 * @param {string}query OData query string, can be null
-		 * @param {Function}callback invoked when OData service has completed
+		 * @param {String}query OData query string, can be null
+		 * @param {Function}success invoked when OData service has completed
+		 * @param {Function}[error] error handler
 		 * callback function should have signature below,
-		 * function({Number}count) {...}
+		 * <ul>
+		 *   <li>function success({Number}count)</li>
+		 *   <li>function error({Error}error)</li>
+		 * </ul>
 		 */
-		getCount: function(query, callback) {
+		getCount: function(query, success, error) {
 			//make sure OData service URI is already specified
 			if (!_uri) {
-				$.base.postFailed("Implementation Error", "OData URI must be set first");
+				$.base.postFailed("Implementation Error: OData URI must be set first");
 				return;
 			}
 			//build OData request
@@ -140,21 +168,25 @@
 			//read $count
 			OData.read(request, function(data, response) {
 				var count = new Number(data);
-				callback(count);
-			});
+				success(count);
+			}, error);
 		},
 		
 		/**
 		 * Returns array of OData entities
-		 * @param {string}query
-		 * @param {Function}callback
+		 * @param {String}query OData query string, can be null
+		 * @param {Function}complete invoked when completed successfully
+		 * @param {Function}[error] error handler
  		 * callback function should have signature below,
-		 * function({Array}entities) {...}
+		 * <ul>
+		 *   <li>function complete({Object[]}result)</li>
+		 *   <li>function error({Error}error)</li>
+		 * </ul>
 		 */
-		getList: function(query, callback) {
+		getList: function(query, complete, error) {
 			$.odata.getCount(query, function(count) {
-				_readData(query, callback, 0, count, []);
-			});
+				_readData(query, complete, error, 0, count, []);
+			}, error);
 		},
 		
 	};

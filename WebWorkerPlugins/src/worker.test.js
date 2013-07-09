@@ -1,9 +1,8 @@
-importScripts("../src/worker.odata.js");
-importScripts("../src/worker.indexeddb.js");
+importScripts("worker.odata.js");
 
 //echo
 self.base.on("echo", function(message) {
-	self.base.postCompleted(message, message.data);
+	self.base.postCompleted(message.data, message);
 });
 
 //query OData
