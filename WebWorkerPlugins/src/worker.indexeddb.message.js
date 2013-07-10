@@ -109,11 +109,7 @@ function AbstractSchema(source) {
 };
 AbstractSchema.prototype.name = "undefined";
 AbstractSchema.prototype.extend = function(source) {
-	if (source) {
-		for (var prop in source) {
-			this[prop] = source[prop];
-		}
-	}
+	deepCopy(this, source);
 };
 
 /**
@@ -129,7 +125,6 @@ AbstractSchema.prototype.extend = function(source) {
  *     {boolean}[multiEntry=false]: key is composed by multiple properties
  *   }
  * }
-
  */
 function IndexedDbObjectStoreIndexSchema(source) {
 	this.extend(source);

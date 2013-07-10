@@ -74,7 +74,7 @@
 					//concatenate result and read next page
 					result = result.concat(data.results);
 					skip = skip + FETCH_PER_REQUEST;
-					_readData(query, callback, skip, max, result);
+					_readData(query, complete, error, skip, max, result);
 				}, error);
 		}else{
 			//reached to last page, hence invoke callback and returns result

@@ -14,6 +14,8 @@
  *   <li>removeHandlers({String[]}nameList)</li>
  *   <li>off({String}name)</li>
  * </ul>
+ * Message event handler should have function signature below
+ * function handler({IndicationMessage}receivedMessage)
  */
 
 
@@ -116,7 +118,7 @@
 		 * @param {String}name name of message event
 		 * @param {Function}handler message handler
 		 * handler function should have signature below,
-		 * function({IndicationMessage}receivedMessage) {...}
+		 * function handler({IndicationMessage}receivedMessage)
 		 */
 		addHandler: function(name, handler) {
 			_handlers[name] = handler;

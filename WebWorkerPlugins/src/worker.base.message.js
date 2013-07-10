@@ -2,6 +2,34 @@
  * Definition of message classes to communicate with worker
  */
 
+function deepCopy(dest, src) {
+	for (var prop in src) {
+		if (src[prop] && (typeof src[prop] === "object")) {
+			switch (src[prop].constructor) {
+			case Array:
+				dest[prop] = dest[prop] || [];
+			case Object:
+				dest[prop] = dest[prop] || {};
+				deepCopy(dest[prop], src[prop]);
+				break;
+			default:
+				dest[prop] = src[prop];
+			}
+		}else{
+			dest[prop] = (src[prop] || !dest[prop]) ? src[prop] : dest[prop];
+		}
+	}
+	return dest;
+};
+
+function flatten(obj) {
+    for(var prop in obj) {
+    	if (typeof obj[prop] !== "function") {
+            obj[prop] = obj[prop];    		
+    	}
+    }
+    return obj;
+}
 /**
  * Abstract message class
  * @class Abstract message
@@ -16,11 +44,8 @@ function AbstractMessage(source) {
 AbstractMessage.prototype.name = "undefined";
 /** Apply source properties to this object */
 AbstractMessage.prototype.extend = function(source) {
-	if (source) {
-		for (var prop in source) {
-			this[prop] = source[prop];
-		}
-	}
+	deepCopy(this, source);
+	flatten(this);
 };
 
 
@@ -80,5 +105,5 @@ WorkerMessage.STATUS = {
 /** inherits AbstractMessage */
 WorkerMessage.prototype = new AbstractMessage({
 	status: WorkerMessage.STATUS.DEBUG,
-	reuslt: {}
+	result: {}
 });
