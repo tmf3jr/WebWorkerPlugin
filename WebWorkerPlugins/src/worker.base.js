@@ -40,6 +40,7 @@
 	 */
 	function _dispatchMessage(event) {
 		var receivedMessage = event.data; //as IndicationMessage
+		$.base.postDebug("received message: " + JSON.stringify(receivedMessage));
 		//invoke corresponding methods
 		var handler = _handlers[receivedMessage.name];
 		if (handler) {

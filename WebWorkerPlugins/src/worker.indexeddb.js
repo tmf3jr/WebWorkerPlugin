@@ -104,9 +104,11 @@
 				}
 			};
 			//open object store
+			$.base.postDebug("Opening ObjectStore: " + name);
 			var objectStore = transaction.objectStore(name);
 			var iterator = objectStore;
 			if (indexName) {
+				$.base.postDebug("Opening index: " + name + "/" + indexName);
 				iterator = objectStore.index(indexName);
 			}
 			callback(iterator, result);
