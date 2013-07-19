@@ -5,11 +5,12 @@
  * 	 <li>postMessage({String}status, {Object}result, {MessageEvent}[receivedMessage])</li>
  *   <li>postCompleted({Object}result, {MessageEvent}[receivedMessag])</li>
  *   <li>postFailed({Object}result, {MessageEvent}[receivedMessag])</li>
+ *   <li>postSuccess({Object}result, {MessageEvent}[receivedMessag])</li>
  *   <li>postInfo({Object}result, {MessageEvent}[receivedMessag])</li>
  *   <li>postDebug({Object}result, {MessageEvent}[receivedMessag])</li>
  *   <li>addHandler({String}name, {Function}handler)</li>
  *   <li>addHandlers({Object}handlers)</li>
- *   <li>on({String}name, handler)</li>
+ *   <li>on({String}name, {Function}handler)</li>
  *   <li>removeHandler({String}name)</li>
  *   <li>removeHandlers({String[]}nameList)</li>
  *   <li>off({String}name)</li>
@@ -69,10 +70,7 @@
 		 * @param {IndicationMessage}[receivedMessage]
 		 */
 		postMessage: function(status, result, receivedMessage) {
-			var name = "undefined";
-			if (receivedMessage) {
-				name = receivedMessage.name;
-			}
+			var name = (receivedMessage) ? receivedMessage.name : "undefined";
 			var message = new WorkerMessage({
 				name: name,
 				status: status,
@@ -95,6 +93,14 @@
 		 */
 		postFailed: function(result, receivedMessage) {
 			$.base.postMessage(WorkerMessage.STATUS.FAILED, result, receivedMessage);
+		},
+		/**
+		 * Post WorkerMessage as success
+		 * @param {Object}result
+		 * @param {IndicationMessage}[receivedMessage]
+		 */
+		postSuccess: function(result, receivedMessage) {
+			$.base.postMessage(WorkerMessage.STATUS.SUCCESS, result, receivedMessage);
 		},
 		/**
 		 * Post WorkerMessage for information

@@ -7,16 +7,18 @@ function deepCopy(dest, src) {
 		if (src[prop] && (typeof src[prop] === "object")) {
 			switch (src[prop].constructor) {
 			case Array:
-				dest[prop] = dest[prop] || [];
+				dest[prop] = (dest.hasOwnProperty(prop)) ? dest[prop] : [];
 			case Object:
-				dest[prop] = dest[prop] || {};
+				dest[prop] = (dest.hasOwnProperty(prop)) ? dest[prop] : {};
 				deepCopy(dest[prop], src[prop]);
 				break;
 			default:
 				dest[prop] = src[prop];
 			}
 		}else{
-			dest[prop] = (src[prop] || !dest[prop]) ? src[prop] : dest[prop];
+			if (src[prop]) {
+				dest[prop] = src[prop];
+			}
 		}
 	}
 	return dest;
@@ -82,7 +84,7 @@ IndicationMessage.prototype = new AbstractMessage({
  * <code>
  * WorkerMessage = {
  * 	 {String}name     :  message event name,
- * 	 {String}status   : "completed" | "failed" | "info" | "debug",
+ * 	 {String}status   : "completed" | "failed" | "success" | "info" | "debug",
  *   {Object}[result] :  event specific result
  * }
  * </code>
@@ -97,6 +99,8 @@ WorkerMessage.STATUS = {
 	COMPLETED : "completed",
 	/** Worker stops its task with failed status */
 	FAILED: "failed",
+	/** Worker succeeded and continues its task */
+	SUCCESS: "success",
 	/** Information for message listener */
 	INFO : "info",
 	/** for debugging */

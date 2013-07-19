@@ -24,6 +24,13 @@
  *   <li>IndexedDbObjectStoreSchema</li>
  *   <li>IndexedDbObjectStoreIndexSchema</li>
  * </ul>
+ * 
+ ****************************************************************************** 
+ * dependency
+ ****************************************************************************** 
+ * <ul>
+ *   <li>worker.base.message.js</li>
+ * </ul>
  */
 
 
@@ -110,6 +117,7 @@ function AbstractSchema(source) {
 AbstractSchema.prototype.name = "undefined";
 AbstractSchema.prototype.extend = function(source) {
 	deepCopy(this, source);
+	flatten(this);
 };
 
 /**

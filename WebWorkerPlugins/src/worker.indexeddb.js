@@ -47,12 +47,10 @@
 	}
 	
 	/**
+	 * Open indexedDB
+	 * @param [success] function success({IDBDatabase}db)
+	 * @param [error] function error(event)
 	 * 
-	 * @param [success] invoked when completed successfully
-	 * @param [error] invoked when error occurred
-	 * each callback functions should have signatures below
-	 * function success({IDBDatabase}db) {...}
-	 * function error(even) {...}
 	 */
 	function _openDatabase(success, error) {
 		//make sure schema is already set
@@ -90,20 +88,20 @@
 	 * @param {string}name
 	 * @param {string}indexName index name can be null
 	 * @param {IDBTransactionMode}mode
-	 * @param result
-	 * @param complete
-	 * @param callback
+	 * @param {Function}success function success(iterator)
+	 * @param {Function}[complete] function complete()
+	 * @param {Function}[error] function error(event)
 	 */
-	function _beginTransaction(name, indexName, mode, result, complete, callback) {
+	function _beginTransaction(name, indexName, mode, success, complete, error) {
 		_openDatabase(function(db) {
 			//begin transaction
 			var transaction = db.transaction([name], mode);
 			transaction.oncomplete = function(event) {
 				if (complete) {
-					complete(event, result);
+					complete(event);
 				}
 			};
-			//open object store
+			//open object store or index
 			$.base.postDebug("Opening ObjectStore: " + name);
 			var objectStore = transaction.objectStore(name);
 			var iterator = objectStore;
@@ -111,18 +109,19 @@
 				$.base.postDebug("Opening index: " + name + "/" + indexName);
 				iterator = objectStore.index(indexName);
 			}
-			callback(iterator, result);
-		});
+			//invoke success callback
+			success(iterator);
+		}, error);
 	}
-	
+
 	
 	/**
 	 * @param {IDBObjectStore or IDBIndex}iterator
 	 * @param {IDBKeyRange}range
 	 * @param {string}direction
-	 * @param {Array}result
+	 * @param {Array}resultKeys
 	 */
-	function _aggregateKeys(iterator, range, direction, result) {
+	function _aggregateKeys(iterator, range, direction, resultKeys) {
 		//sanitize arguments
 		if (!direction || direction === IndexedDbEnum.DIRECTION.NEXT) {
 			direction = IndexedDbEnum.DIRECTION.NEXT_UNIQUE;			
@@ -149,9 +148,9 @@
 						key: key,
 						count: count
 					};
-					result.push(entity);
+					resultKeys.push(entity);
 				};
-			    cursor.advance(1);				
+			    cursor.continue();
 			}
 		};
 	}
@@ -160,9 +159,9 @@
 	 * @param {IDBObjectStore or IDBIndex}iterator
 	 * @param {IDBKeyRange}range
 	 * @param {string}direction
-	 * @param {Array}result
+	 * @param {Array}resultValues
 	 */
-	function _aggregateValues(iterator, range, direction, result) {
+	function _aggregateValues(iterator, range, direction, resultValues) {
 		//sanitize arguments
 		if (!direction) {
 			direction = IndexedDbEnum.DIRECTION.NEXT;
@@ -173,8 +172,8 @@
 			//iterate keys
 			var cursor = event.target.result;
 			if (cursor) {
-				result.push(cursor.value);
-			    cursor.advance(1);				
+				resultValues.push(cursor.value);
+				cursor.continue();
 			}
 		};
 	}
@@ -182,16 +181,17 @@
 	
 	//message event handlers
 	function _handleSetSchema(message) {
-		$.idb.setSchema(message.data);
+		$.idb.setSchema(message.data.schema);
 	}
 	function _handleSave(message) {
 		var req = message.data;
 		$.idb.save(req.source.objectStore, req.values, 
 			function(event) {
-				$.base.postCompleted(null, message);
+				$.base.postSuccess(null, message);
 		});
 	}
 	function _handleRead(message) {
+		//collect parameters
 		var req = message.data;
 		var range = null;
 		var direction = IndexedDbEnum.DIRECTION.NEXT;
@@ -199,12 +199,14 @@
 			range = req.query.range;
 			direction = req.query.direction;
 		}
+		//call read method
 		$.idb.read(req.source.objectStore, req.source.index, range, direction,
-			function(event, result) {
-				$.base.postCompleted(result, message);
+			function(event, resultValues) {
+				$.base.postSuccess(resultValues, message);
 		});
 	}
 	function _handleReadKeys(message) {
+		//collect parameters
 		var req = message.data;
 		var range = null;
 		var direction = IndexedDbEnum.DIRECTION.NEXT_UNIQUE;
@@ -213,16 +215,17 @@
 			direction = (req.query.direction) ?
 				req.query.direction : IndexedDbEnum.DIRECTION.NEXT_UNIQUE;
 		}
+		//call readKeys method
 		$.idb.readKeys(req.source.objectStore, req.source.index, range, direction,
-			function(event, result) {
-				$.base.postCompleted(result, message);
+			function(event, resultKeys) {
+				$.base.postSuccess(resultKeys, message);
 		});
 	}
 	function _handleRemove(message) {
 		var req = message.data;
 		$.idb.remove(req.source.objectStore, req.source.index, req.query.range,
 			function(event) {
-				$.base.postCompleted(null, message);
+				$.base.postSuccess(null, message);
 		});
 	}
 
@@ -260,10 +263,10 @@
 		 * Store data into local database
 		 * @param {string}name object store name
 		 * @param {Array or object} objects to be stored
-		 * @param {Function}[callback] invoked when completed
+		 * @param {Function}[complete] invoked when completed
 		 */
-		save: function(name, objects, callback) {
-			_beginTransaction(name, null, IndexedDbEnum.MODE.RW, null, callback,
+		save: function(name, objects, complete) {
+			_beginTransaction(name, null, IndexedDbEnum.MODE.RW,
 				function(store) {
 					if (objects instanceof Array) {
 						for (var i = 0; i < objects.length; i++) {
@@ -273,7 +276,8 @@
 					}else{
 						store.put(objects);
 					};
-				});
+				},
+				complete);
 		},
 		/**
 		 * Read data from local database
@@ -281,35 +285,45 @@
 		 * @param {string}index index name, can be null
 		 * @param {IDBKeyRange}range search range, can be null
 		 * @param {string}direction cursor direction affects sort order
-		 * @param {Function}callback invoked when completed
+		 * @param {Function}complete function complete(event, result)
 		 */
-		read: function(name, indexName, range, direction, callback) {
-			var result = [];
-			_beginTransaction(name, indexName, IndexedDbEnum.MODE.RO, result, callback,
+		read: function(name, indexName, range, direction, complete) {
+			var resultValues = [];
+			_beginTransaction(name, indexName, IndexedDbEnum.MODE.RO,
 				function(iterator) {
-					_aggregateValues(iterator, range, direction, result);
+					_aggregateValues(iterator, range, direction, resultValues);
+				},
+				function (event) {
+					if (complete) {
+						complete(event, resultValues);
+					}
 				});
 		},
 		
-		readKeys: function(name, indexName, range, direction, callback) {
-			var result = [];
-			_beginTransaction(name, indexName, IndexedDbEnum.MODE.RO, result, callback,
+		readKeys: function(name, indexName, range, direction, complete) {
+			var resultKeys = [];
+			_beginTransaction(name, indexName, IndexedDbEnum.MODE.RO,
 				function(iterator) {
-					_aggregateKeys(iterator, range, direction, result);
+					_aggregateKeys(iterator, range, direction, resultKeys);
+				},
+				function(event) {
+					if (complete) {
+						complete(event, resultKeys);
+					}
 				});
 		},
 		
-		remove: function(name, indexName, range, callback) {
-			var result = [];
-			_beginTransaction(name, indexName, IndexedDbEnum.MODE.RW, result, callback,
+		remove: function(name, indexName, range, complete) {
+			_beginTransaction(name, indexName, IndexedDbEnum.MODE.RW,
 				function(iterator) {
 					var cursorReq = iterator.openCursor(range);
 					cursorReq.onsuccess = function(event) {
 						var cursor = event.target.result;
 						cursor.delete();
-						cursor.advance(1);
+						cursor.continue();
 					};
-			});
+				},
+				complete);
 		}
 	};
 

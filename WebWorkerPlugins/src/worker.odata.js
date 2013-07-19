@@ -42,18 +42,18 @@
 	 * Recursive read data, then finally invoke callback
 	 * @private
 	 * @param {String}query OData query, can be null
-	 * @param {Function}complete invoked when completed
+	 * @param {Function}success invoked when completed successfully
 	 * @param {Function}error invoked when error occurred, can be null
 	 * @param {Number}skip $skip parameter of OData query
 	 * @param {Number}max maximum number of OData entities to be read
 	 * @param {Object[]}result stores OData entities
 	 * callback function should have signature below.<br/>
 	 * <ul>
-	 *   <li>function complete({Object[]}result)</li>
+	 *   <li>function success({Object[]}result)</li>
 	 *   <li>function error({Error}error)</li>
 	 * </ul>
 	 */
-	function _readData(query, complete, error, skip, max, result) {
+	function _readData(query, success, error, skip, max, result) {
 		if (skip < max) {
 			//create query
 			var url = _uri + "?$skip=" + skip + "&$top=" + FETCH_PER_REQUEST;
@@ -74,11 +74,11 @@
 					//concatenate result and read next page
 					result = result.concat(data.results);
 					skip = skip + FETCH_PER_REQUEST;
-					_readData(query, complete, error, skip, max, result);
+					_readData(query, success, error, skip, max, result);
 				}, error);
 		}else{
 			//reached to last page, hence invoke callback and returns result
-			complete(result);
+			success(result);
 		}
 	}
 
@@ -97,7 +97,7 @@
 		}
 		//call OData service
 		$.odata.getCount(query,
-			function(count) { $.base.postCompleted(count, message);	},
+			function(count) { $.base.postSuccess(count, message);	},
 			function(error) { $.base.postFailed(error, message); });
 	}
 	function _handleGetList(message) {
@@ -108,7 +108,7 @@
 		}
 		//call OData service
 		$.odata.getList(query,
-			function(result) { $.base.postCompleted(result, message); },
+			function(result) { $.base.postSuccess(result, message); },
 			function(error) { $.base.postFailed(error, message); });
 	}	
 	
@@ -175,7 +175,7 @@
 		/**
 		 * Returns array of OData entities
 		 * @param {String}query OData query string, can be null
-		 * @param {Function}complete invoked when completed successfully
+		 * @param {Function}success invoked when completed successfully
 		 * @param {Function}[error] error handler
  		 * callback function should have signature below,
 		 * <ul>
@@ -183,9 +183,9 @@
 		 *   <li>function error({Error}error)</li>
 		 * </ul>
 		 */
-		getList: function(query, complete, error) {
+		getList: function(query, success, error) {
 			$.odata.getCount(query, function(count) {
-				_readData(query, complete, error, 0, count, []);
+				_readData(query, success, error, 0, count, []);
 			}, error);
 		},
 		

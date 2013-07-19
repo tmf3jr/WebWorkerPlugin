@@ -2,11 +2,22 @@
  * Definition of message classes to communicate with worker OData plug-in.
  * This classes are depends on "worker.base.message.js" file.<br/>
  * <br/>
+ * 
+ ******************************************************************************
+ * OData methods
+ ****************************************************************************** 
  * Some of indication message may cause WorkerMessage as return of task.<br/>
  * These are content of result for task indication.
  * <ul>
  *   <li>"OData.getCount": {Number}</li>
  *   <li>"OData.getList": {Object[]}</li>
+ * </ul>
+ * 
+ ******************************************************************************
+ * dependency
+ ****************************************************************************** 
+ * <ul>
+ *   <li>worker.base.message.js</li>
  * </ul>
  */
 

@@ -8,15 +8,16 @@
 		if (message.status === WorkerMessage.STATUS.DEBUG) {
 			console.debug(message);
 		}else if (message.status === WorkerMessage.STATUS.INFO) {
-				console.info(message);
+			console.info(message);
 		}else{
 			//invoke corresponding methods
 			var handler = this.handlers[message.name];
 			if (handler) {
 				handler(message);
 			}else{
-				//error when handler is not defined
-				console.error("undefined message event " + message.name);
+				//handler is not defined
+				console.warn("Received undefined message event");
+				console.dir(event);
 			}
 		}
 	}
@@ -48,7 +49,7 @@
 		delete this.handlers[name];
 	}
 
-	Worker.prototype.onmessage = _dispatchMessage;
+	//instance methods
 	Worker.prototype.on = _addMessageHandler;
 	Worker.prototype.off = _removeMessageHandler;
 	Worker.prototype.handlers = {};
