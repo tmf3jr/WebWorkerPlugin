@@ -23,13 +23,13 @@
 //plug-in implementation ------------------------------------------------------
 (function($) {
 	//constant values and configurations ------------------------------------------
-	var DEPENCENCIES = ['datajs-1.1.1beta2.min.js',
+	var DEPENDENCIES = ['datajs-1.1.1beta2.min.js',
 	                    'worker.base.js', 'worker.odata.message.js'];
 	var FETCH_PER_REQUEST = 50;
 
 	//import dependency
-	for (var i = 0; i < DEPENCENCIES.length; i++) {
-		importScripts(DEPENCENCIES[i]);		
+	for (var i = 0; i < DEPENDENCIES.length; i++) {
+		importScripts(DEPENDENCIES[i]);		
 	}
 	
 	

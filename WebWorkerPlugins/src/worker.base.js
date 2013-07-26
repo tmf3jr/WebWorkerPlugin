@@ -2,12 +2,12 @@
  * This is worker plug-in to add functionality for posting or receiving message.<br/>
  * Following methods are added to worker under "self.base" namespace.<br/>
  * <ul>
- * 	 <li>postMessage({String}status, {Object}result, {MessageEvent}[receivedMessage])</li>
- *   <li>postCompleted({Object}result, {MessageEvent}[receivedMessag])</li>
- *   <li>postFailed({Object}result, {MessageEvent}[receivedMessag])</li>
- *   <li>postSuccess({Object}result, {MessageEvent}[receivedMessag])</li>
- *   <li>postInfo({Object}result, {MessageEvent}[receivedMessag])</li>
- *   <li>postDebug({Object}result, {MessageEvent}[receivedMessag])</li>
+ * 	 <li>postMessage({String}status, {Object}result, {IndicationMessage}[receivedMessage])</li>
+ *   <li>postCompleted({Object}result, {IndicationMessage}[receivedMessag])</li>
+ *   <li>postFailed({Object}result, {IndicationMessage}[receivedMessag])</li>
+ *   <li>postSuccess({Object}result, {IndicationMessage}[receivedMessag])</li>
+ *   <li>postInfo({Object}result, {IndicationMessage}[receivedMessag])</li>
+ *   <li>postDebug({Object}result, {IndicationMessage}[receivedMessag])</li>
  *   <li>addHandler({String}name, {Function}handler)</li>
  *   <li>addHandlers({Object}handlers)</li>
  *   <li>on({String}name, {Function}handler)</li>
@@ -23,11 +23,11 @@
 //plug-in implementation ------------------------------------------------------
 (function($) {
 	//constant values and configurations ------------------------------------------
-	var DEPENCENCIES = ["worker.base.message.js"];
+	var DEPENDENCIES = ["worker.base.message.js"];
 	
 	//import dependency
-	for (var i = 0; i < DEPENCENCIES.length; i++) {
-		importScripts(DEPENCENCIES[i]);		
+	for (var i = 0; i < DEPENDENCIES.length; i++) {
+		importScripts(DEPENDENCIES[i]);		
 	}
 	//message event handler collection
 	var _handlers = {};

@@ -52,7 +52,6 @@
 	//instance methods
 	Worker.prototype.on = _addMessageHandler;
 	Worker.prototype.off = _removeMessageHandler;
-	Worker.prototype.handlers = {};
 	
 	/**
 	 * Creates a new worker with default event handlers
@@ -63,6 +62,7 @@
 		var worker = new Worker(url);
 		worker.onmessage = _dispatchMessage;
 		worker.onerror = _printError;
+		worker.handlers = {};
 		return worker;
 	};
 })();
